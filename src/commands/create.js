@@ -14,7 +14,7 @@ module.exports = {
         .addBooleanOption(option =>
             option.setName('use_observer')
                 .setDescription('観戦用ロールと専用チャンネルを作成しますか？'))
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
         const sessionName = interaction.options.getString('name');
         const useGM = interaction.options.getBoolean('use_gm') ?? false; // デフォルトをfalseに変更

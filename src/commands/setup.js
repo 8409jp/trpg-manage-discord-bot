@@ -9,7 +9,7 @@ module.exports = {
             option.setName('category_id')
                 .setDescription('アーカイブ先のカテゴリIDを入力してください')
                 .setRequired(true))
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
         const categoryId = interaction.options.getString('category_id');
         const guild = interaction.guild;
