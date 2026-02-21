@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Local data (Guild configurations)
+data/
+
+# Temporary files and logs
+*.log
+npm-debug.log*
+.DS_Store
+
+# Archive artifacts
+*.zip
+temp/
