@@ -73,6 +73,46 @@ TRPG のセッション環境作成と、終了後のログアーカイブ・整
   - `confirm` (必須): 誤操作防止のため、`True` を選択する必要があります。
   - ※ 関連するカテゴリ、チャンネル、およびロールをすべて削除します。
 
-## 5. 補足
+## 5. pm2 による常駐起動（Windows 11）
+
+Bot を常駐プロセスとして管理したい場合、[pm2](https://pm2.keymetrics.io/) を使用します。
+
+### pm2 のインストール
+
+```powershell
+npm install -g pm2
+npm install -g pm2-windows-startup
+```
+
+### Bot の起動
+
+```powershell
+pm2 start src/index.js --name trpg-bot
+```
+
+### 基本操作
+
+| コマンド | 説明 |
+|---|---|
+| `pm2 list` | 起動中のプロセス一覧を表示 |
+| `pm2 logs trpg-bot` | ログをリアルタイム表示 |
+| `pm2 restart trpg-bot` | Bot を再起動 |
+| `pm2 stop trpg-bot` | Bot を停止 |
+| `pm2 delete trpg-bot` | pm2 の管理から削除 |
+
+### PC 起動時に自動起動する設定
+
+以下のコマンドで、Windows の起動時に Bot が自動で起動するよう設定できます。
+
+```powershell
+pm2 save
+pm2-startup install
+```
+
+> **注意:** `pm2-startup install` は管理者権限のターミナル（PowerShell を「管理者として実行」）で実行してください。
+
+---
+
+## 6. 補足
 - 管理用データは `./data/config.json` に保存されます。バックアップや手動編集が可能です。
 - アーカイブ機能は、Discord のファイルサイズ制限（25MB）を超える場合、自動的に画像を省略する「ライトモード」で再試行します。
