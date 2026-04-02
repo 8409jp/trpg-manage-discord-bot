@@ -74,8 +74,15 @@ async function localizeHtml(html, assetsDir, assetMap, depth) {
 
         for (const url of uniqueUrls) {
             const cleanUrl = url.split('"')[0].split('\'')[0].split(')')[0];
-            const localFile = await downloadAsset(cleanUrl, assetsDir, assetMap);
+            // HTMLエンティティデコード（&amp; → & など）してから実際のURLとしてダウンロード
+            const decodedUrl = cleanUrl
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"');
+            const localFile = await downloadAsset(decodedUrl, assetsDir, assetMap);
             if (localFile) {
+                // HTML中に存在する元の文字列（エンコード済み）を置換する
                 localizedHtml = localizedHtml.split(cleanUrl).join(prefix + localFile);
             }
         }
