@@ -64,7 +64,7 @@ async function downloadAsset(url, assetsDir, assetMap) {
 }
 
 async function localizeHtml(html, assetsDir, assetMap, depth) {
-    const urlRegex = /https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/[^\s"']+/g;
+    const urlRegex = /https:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/[^\s"'<>]+/g;
     let localizedHtml = html;
     const matches = html.match(urlRegex);
 
