@@ -38,19 +38,55 @@ module.exports = {
         await interaction.reply({ content: `${sessionName} のアーカイブ処理を開始します。この処理には時間がかかる場合があります...`, flags: [MessageFlags.Ephemeral] });
 
         try {
-            // カテゴリの権限設定からロールを特定 (参加者リスト作成やクリーンアップに使用)
-            let plRole = null;
-            let gmRole = null;
-            let observerRole = null;
+            // カテゴリおよび配下チャンネルの権限設定から全ロールを収集
+            const overwriteRolesMap = new Map();
+            
+            const extractRoles = (channel) => {
+                for (const overwrite of channel.permissionOverwrites.cache.values()) {
+                    if (overwrite.type !== 0 || overwrite.id === guild.id) continue;
+                    const role = guild.roles.cache.get(overwrite.id);
+                    if (role && !role.managed && !role.permissions.has(PermissionFlagsBits.Administrator)) {
+                        overwriteRolesMap.set(role.id, role);
+                    }
+                }
+            };
 
-            for (const overwrite of category.permissionOverwrites.cache.values()) {
-                if (overwrite.type !== 0) continue; // ロール以外はスキップ
-                const role = guild.roles.cache.get(overwrite.id);
-                if (!role) continue;
+            extractRoles(category);
+            for (const [id, channel] of category.children.cache) {
+                extractRoles(channel);
+            }
 
-                if (role.name === sessionName) plRole = role;
-                else if (role.name === `${sessionName}-GM`) gmRole = role;
-                else if (role.name === `${sessionName}-観戦`) observerRole = role;
+            const overwriteRoles = Array.from(overwriteRolesMap.values());
+
+            // ベースとなるセッション名を推測する (カテゴリ名がリネームされている場合の対策)
+            let guessedSessionName = category.name;
+            for (const role of overwriteRoles) {
+                if (role.name.endsWith('-GM')) {
+                    guessedSessionName = role.name.replace(/-GM$/, '');
+                    break;
+                } else if (role.name.endsWith('-観戦')) {
+                    guessedSessionName = role.name.replace(/-観戦$/, '');
+                    break;
+                }
+            }
+
+            // セッション用のロール（botが作成したもの）を判定して保持する
+            const targetRoles = [];
+            for (const role of overwriteRoles) {
+                // 1. カテゴリ作成時間と近い (1分以内ならbotが同時期に作成した可能性大)
+                const timeDiff = Math.abs(role.createdTimestamp - category.createdTimestamp);
+                const createdTogether = timeDiff < 1000 * 60;
+
+                // 2. ロール名が推測されるセッション名を含むか、よくあるサフィックスを持つ
+                const matchName = role.name.includes(guessedSessionName) || 
+                                  role.name === category.name || 
+                                  role.name.includes('GM') || 
+                                  role.name.includes('観戦') || 
+                                  role.name.includes('PL');
+
+                if (createdTogether || matchName) {
+                    targetRoles.push(role);
+                }
             }
 
             // ロールからメンバーを取得し、リストと権限設定を作成
@@ -67,8 +103,8 @@ module.exports = {
             };
             const MAX_OVERWRITES = 250;
             const addedUserIds = new Set();
-            const addOverwrite = (id, list, name) => {
-                if (!addedUserIds.has(id)) {
+            const addOverwrite = (id, list, name, isAdmin) => {
+                if (!isAdmin && !addedUserIds.has(id)) {
                     if (overwrites.length < MAX_OVERWRITES) {
                         overwrites.push({ id: id, allow: [PermissionFlagsBits.ViewChannel] });
                         addedUserIds.add(id);
@@ -79,22 +115,20 @@ module.exports = {
                 }
             };
 
-            if (plRole) {
-                const members = await plRole.members;
-                for (const [id, member] of members) {
-                    addOverwrite(member.id, memberLists.pl, member.toString());
+            for (const role of targetRoles) {
+                let type = 'pl';
+                if (role.name.includes('GM')) {
+                    type = 'gm';
+                } else if (role.name.includes('観戦') || role.name.includes('見学')) {
+                    type = 'observer';
+                } else {
+                    type = 'pl';
                 }
-            }
-            if (gmRole) {
-                const members = await gmRole.members;
+
+                const members = await role.members;
                 for (const [id, member] of members) {
-                    addOverwrite(member.id, memberLists.gm, member.toString());
-                }
-            }
-            if (observerRole) {
-                const members = await observerRole.members;
-                for (const [id, member] of members) {
-                    addOverwrite(member.id, memberLists.observer, member.toString());
+                    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+                    addOverwrite(member.id, memberLists[type], member.toString(), isAdmin);
                 }
             }
 
@@ -186,10 +220,10 @@ module.exports = {
                 }
 
                 // 3. ロールの削除 (刷新: 移行処理をなくし、基本全て削除)
-                if (deleteRoles !== false) {
-                    if (plRole) await plRole.delete('Archive cleanup').catch(() => { });
-                    if (gmRole) await gmRole.delete('Archive cleanup').catch(() => { });
-                    if (observerRole) await observerRole.delete('Archive cleanup').catch(() => { });
+                if (deleteRoles !== false || deleteChannels !== false) {
+                    for (const role of targetRoles) {
+                        await role.delete('Archive cleanup').catch(() => { });
+                    }
                 }
 
                 // 4. カテゴリとチャンネルの削除 (オプション)
