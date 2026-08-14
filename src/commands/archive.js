@@ -40,7 +40,7 @@ module.exports = {
         try {
             // カテゴリおよび配下チャンネルの権限設定から全ロールを収集
             const overwriteRolesMap = new Map();
-            
+
             const extractRoles = (channel) => {
                 for (const overwrite of channel.permissionOverwrites.cache.values()) {
                     if (overwrite.type !== 0 || overwrite.id === guild.id) continue;
@@ -77,12 +77,13 @@ module.exports = {
                 const timeDiff = Math.abs(role.createdTimestamp - category.createdTimestamp);
                 const createdTogether = timeDiff < 1000 * 60;
 
-                // 2. ロール名が推測されるセッション名を含むか、よくあるサフィックスを持つ
-                const matchName = role.name.includes(guessedSessionName) || 
-                                  role.name === category.name || 
-                                  role.name.includes('GM') || 
-                                  role.name.includes('観戦') || 
-                                  role.name.includes('PL');
+                // 2. 推測される本来のセッション名、または現在のカテゴリ名をベースにした完全一致判定
+                const matchName = role.name === guessedSessionName ||
+                    role.name === `${guessedSessionName}-GM` ||
+                    role.name === `${guessedSessionName}-観戦` ||
+                    role.name === category.name ||
+                    role.name === `${category.name}-GM` ||
+                    role.name === `${category.name}-観戦`;
 
                 if (createdTogether || matchName) {
                     targetRoles.push(role);
@@ -119,7 +120,7 @@ module.exports = {
                 let type = 'pl';
                 if (role.name.includes('GM')) {
                     type = 'gm';
-                } else if (role.name.includes('観戦') || role.name.includes('見学')) {
+                } else if (role.name.includes('観戦')) {
                     type = 'observer';
                 } else {
                     type = 'pl';
