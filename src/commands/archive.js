@@ -162,12 +162,13 @@ module.exports = {
                     name: sessionName,
                     type: ChannelType.GuildText,
                     parent: archiveCategory.id,
-                    permissionOverwrites: overwrites,
+                    permissionOverwrites: [
+                        {
+                            id: guild.id,
+                            deny: [PermissionFlagsBits.ViewChannel]
+                        }
+                    ],
                 });
-
-                if (overwrites.length >= MAX_OVERWRITES) {
-                    await archiveChannel.send('⚠️ 参加者が非常に多いため、一部のユーザーへの個別権限付与を制限しました。必要に応じて手動で調整してください。');
-                }
             }
 
             // 参加者リストメッセージの構築 (2000文字制限対応)
@@ -236,6 +237,15 @@ module.exports = {
                         await channel.delete('Archive cleanup').catch(() => { });
                     }
                     await category.delete('Archive cleanup').catch(() => { });
+                }
+
+                // 5. アーカイブ先チャンネルへの参加者権限付与（削除処理後に実行）
+                if (!targetChannelId) {
+                    await archiveChannel.permissionOverwrites.set(overwrites).catch(console.error);
+                    
+                    if (overwrites.length >= MAX_OVERWRITES) {
+                        await archiveChannel.send('⚠️ 参加者が非常に多いため、一部のユーザーへの個別権限付与を制限しました。必要に応じて手動で調整してください。');
+                    }
                 }
 
                 try {
