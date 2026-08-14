@@ -38,6 +38,9 @@ module.exports = {
         await interaction.reply({ content: `${sessionName} のアーカイブ処理を開始します。この処理には時間がかかる場合があります...`, flags: [MessageFlags.Ephemeral] });
 
         try {
+            // サーバーのメンバーキャッシュが空（bot再起動直後など）だとrole.membersが取得できないため、事前にフェッチする
+            await guild.members.fetch().catch(console.error);
+
             // カテゴリおよび配下チャンネルの権限設定から全ロールを収集
             const overwriteRolesMap = new Map();
 
