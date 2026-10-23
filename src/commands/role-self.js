@@ -32,14 +32,20 @@ module.exports = {
             });
         }
 
-        // customId にロールIDを埋め込む（Bot再起動後も機能する）
-        const button = new ButtonBuilder()
-            .setCustomId(`role-self:${role.id}`)
-            .setLabel(label)
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🎭');
+        // customId にアクション（add/remove）とロールIDを埋め込む（Bot再起動後も機能する）
+        const addButton = new ButtonBuilder()
+            .setCustomId(`role-self:add:${role.id}`)
+            .setLabel('取得')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('➕');
 
-        const row = new ActionRowBuilder().addComponents(button);
+        const removeButton = new ButtonBuilder()
+            .setCustomId(`role-self:remove:${role.id}`)
+            .setLabel('解除')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('➖');
+
+        const row = new ActionRowBuilder().addComponents(addButton, removeButton);
 
         await interaction.reply({
             content: `✅ ボタンを設置しました。（対象ロール: ${role}）`,
@@ -47,7 +53,7 @@ module.exports = {
         });
 
         await interaction.channel.send({
-            content: `🎭 **${label}** ロールを取得・返却できます。`,
+            content: `🎭 **${label}** ロールの取得・解除ができます。`,
             components: [row],
         });
     },

@@ -5,9 +5,22 @@ module.exports = {
     async execute(interaction) {
         // ── ボタンインタラクション ──────────────────────────────────────
         if (interaction.isButton()) {
-            const [prefix, roleId] = interaction.customId.split(':');
+            const parts = interaction.customId.split(':');
+            const prefix = parts[0];
 
             if (prefix === 'role-self') {
+                let action = 'toggle';
+                let roleId;
+
+                if (parts.length === 3) {
+                    // 新形式: role-self:add:ROLE_ID または role-self:remove:ROLE_ID
+                    action = parts[1];
+                    roleId = parts[2];
+                } else {
+                    // 旧形式: role-self:ROLE_ID (後方互換用)
+                    roleId = parts[1];
+                }
+
                 try {
                     const role = interaction.guild.roles.cache.get(roleId);
 
@@ -19,19 +32,47 @@ module.exports = {
                     }
 
                     const member = interaction.member;
+                    const hasRole = member.roles.cache.has(roleId);
 
-                    if (member.roles.cache.has(roleId)) {
+                    if (action === 'add') {
+                        if (hasRole) {
+                            return interaction.reply({
+                                content: `ℹ️ 既に **${role.name}** ロールを持っています。`,
+                                flags: [MessageFlags.Ephemeral],
+                            });
+                        }
+                        await member.roles.add(role);
+                        await interaction.reply({
+                            content: `🟢 **${role.name}** ロールが付与されました。`,
+                            flags: [MessageFlags.Ephemeral],
+                        });
+                    } else if (action === 'remove') {
+                        if (!hasRole) {
+                            return interaction.reply({
+                                content: `ℹ️ **${role.name}** ロールを持っていません。`,
+                                flags: [MessageFlags.Ephemeral],
+                            });
+                        }
                         await member.roles.remove(role);
                         await interaction.reply({
                             content: `🔴 **${role.name}** ロールが解除されました。`,
                             flags: [MessageFlags.Ephemeral],
                         });
                     } else {
-                        await member.roles.add(role);
-                        await interaction.reply({
-                            content: `🟢 **${role.name}** ロールが付与されました。`,
-                            flags: [MessageFlags.Ephemeral],
-                        });
+                        // 旧形式（トグル）
+                        if (hasRole) {
+                            await member.roles.remove(role);
+                            await interaction.reply({
+                                content: `🔴 **${role.name}** ロールが解除されました。`,
+                                flags: [MessageFlags.Ephemeral],
+                            });
+                        } else {
+                            await member.roles.add(role);
+                            await interaction.reply({
+                                content: `🟢 **${role.name}** ロールが付与されました。`,
+                                flags: [MessageFlags.Ephemeral],
+                            });
+                        }
                     }
                 } catch (error) {
                     console.error('[role-self] ロール操作エラー:', error);
