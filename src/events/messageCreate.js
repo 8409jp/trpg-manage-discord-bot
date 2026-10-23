@@ -7,9 +7,17 @@ module.exports = {
         // ボットのメッセージは無視
         if (message.author.bot) return;
 
+        let content = message.content.trim();
+
+        // ボットへのメンションが先頭についている場合は取り除く (<@12345...> または <@!12345...>)
+        if (message.client.user) {
+            const botMentionRegex = new RegExp(`^<@!?${message.client.user.id}>[\\s\\u3000]*`);
+            content = content.replace(botMentionRegex, '');
+        }
+
         // メッセージを半角・全角空白で分割
         // 全角空白も考慮して正規表現で分割
-        const args = message.content.split(/[\s\u3000]+/);
+        const args = content.split(/[\s\u3000]+/);
         const command = args[0];
 
         if (!command) return;
