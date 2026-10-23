@@ -144,7 +144,7 @@ module.exports = {
             // GM連絡用 (GMのみ閲覧&書き込み)
             if (useGM && gmRole) {
                 await guild.channels.create({
-                    name: 'GM連絡用',
+                    name: 'GM用',
                     type: ChannelType.GuildText,
                     parent: category.id,
                     permissionOverwrites: [
@@ -165,6 +165,40 @@ module.exports = {
                             allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
                         },
                     ].filter(Boolean),
+                });
+            }
+
+            // ボイスチャンネル (ロール保有者のみ接続・閲覧可能)
+            const voiceChannels = ['SESSION - Main', 'SESSION - Sub'];
+            const voiceOverwrites = [
+                {
+                    id: guild.id, // @everyone
+                    deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+                },
+                {
+                    id: plRole.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+                },
+            ];
+            if (gmRole) {
+                voiceOverwrites.push({
+                    id: gmRole.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+                });
+            }
+            if (observerRole) {
+                voiceOverwrites.push({
+                    id: observerRole.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+                });
+            }
+
+            for (const name of voiceChannels) {
+                await guild.channels.create({
+                    name: name,
+                    type: ChannelType.GuildVoice,
+                    parent: category.id,
+                    permissionOverwrites: voiceOverwrites,
                 });
             }
 

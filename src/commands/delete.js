@@ -31,6 +31,12 @@ module.exports = {
         await interaction.reply({ content: `${sessionName} の削除処理を開始します...`, flags: [MessageFlags.Ephemeral] });
 
         try {
+            // サーバーのチャンネルおよびロールキャッシュが空の場合に備えて事前にフェッチ
+            await Promise.all([
+                guild.channels.fetch().catch(console.error),
+                guild.roles.fetch().catch(console.error),
+            ]);
+
             // 1. カテゴリの権限設定からロールを特定
             let plRole = null;
             let gmRole = null;
