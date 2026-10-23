@@ -45,6 +45,19 @@ module.exports = {
             return; // ボタン処理はここで終了
         }
 
+        // ── オートコンプリート ─────────────────────────────────────────
+        if (interaction.isAutocomplete()) {
+            const command = interaction.client.commands.get(interaction.commandName);
+            if (!command || !command.autocomplete) return;
+
+            try {
+                await command.autocomplete(interaction);
+            } catch (error) {
+                console.error(`[Autocomplete Error] ${interaction.commandName}:`, error);
+            }
+            return;
+        }
+
         // ── スラッシュコマンド ─────────────────────────────────────────
         if (!interaction.isChatInputCommand()) return;
 

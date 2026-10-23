@@ -1,20 +1,25 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } = require('discord.js');
+const { handleCategoryAutocomplete, resolveCategory } = require('../utils/categoryAutocomplete');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('session-delete')
         .setDescription('アーカイブせずにセッション環境（カテゴリ・チャンネル・ロール）を直接削除します。')
         .addStringOption(option =>
-            option.setName('category_id')
-                .setDescription('削除するカテゴリのIDを入力してください')
-                .setRequired(true))
+            option.setName('category')
+                .setDescription('削除するカテゴリを選択または入力してください')
+                .setRequired(true)
+                .setAutocomplete(true))
         .addBooleanOption(option =>
             option.setName('confirm')
                 .setDescription('本当に削除する場合は「True」を選択してください')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async autocomplete(interaction) {
+        await handleCategoryAutocomplete(interaction);
+    },
     async execute(interaction) {
-        const categoryId = interaction.options.getString('category_id');
+        const categoryInput = interaction.options.getString('category');
         const confirm = interaction.options.getBoolean('confirm');
         const guild = interaction.guild;
 
@@ -22,9 +27,9 @@ module.exports = {
             return interaction.reply({ content: '削除をキャンセルしました。確認オプションを「True」にして実行してください。', flags: [MessageFlags.Ephemeral] });
         }
 
-        const category = guild.channels.cache.get(categoryId);
+        const category = resolveCategory(guild, categoryInput);
         if (!category || category.type !== ChannelType.GuildCategory) {
-            return interaction.reply({ content: '無効なカテゴリIDです。削除したいカテゴリのIDを指定してください。', flags: [MessageFlags.Ephemeral] });
+            return interaction.reply({ content: '指定されたカテゴリが見つかりません。入力候補から選択するか、正しいカテゴリ名またはIDを指定してください。', flags: [MessageFlags.Ephemeral] });
         }
 
         const sessionName = category.name;

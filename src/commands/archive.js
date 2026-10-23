@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, AttachmentBuilder, MessageFlags } = require('discord.js');
 const { createFullArchive } = require('../utils/archiver');
 const { getGuildConfig } = require('../utils/config');
+const { handleCategoryAutocomplete, resolveCategory } = require('../utils/categoryAutocomplete');
 const fs = require('fs');
 require('dotenv').config();
 
@@ -9,9 +10,10 @@ module.exports = {
         .setName('session-archive')
         .setDescription('セッションを終了し、ログのアーカイブを作成してチャンネルを整理します。')
         .addStringOption(option =>
-            option.setName('category_id')
-                .setDescription('アーカイブするカテゴリのIDを入力してください')
-                .setRequired(true))
+            option.setName('category')
+                .setDescription('アーカイブするカテゴリを選択または入力してください')
+                .setRequired(true)
+                .setAutocomplete(true))
         .addBooleanOption(option =>
             option.setName('delete_roles')
                 .setDescription('GM/観戦ロールを削除しますか？ (デフォルト: false)'))
@@ -22,16 +24,19 @@ module.exports = {
             option.setName('target_channel_id')
                 .setDescription('既存のチャンネルに送信したい場合は、チャンネルIDを入力してください'))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async autocomplete(interaction) {
+        await handleCategoryAutocomplete(interaction);
+    },
     async execute(interaction) {
-        const categoryId = interaction.options.getString('category_id');
+        const categoryInput = interaction.options.getString('category');
         const deleteRoles = interaction.options.getBoolean('delete_roles') ?? false;
         const deleteChannels = interaction.options.getBoolean('delete_channels') ?? false;
         const targetChannelId = interaction.options.getString('target_channel_id');
         const guild = interaction.guild;
-        const category = guild.channels.cache.get(categoryId);
+        const category = resolveCategory(guild, categoryInput);
 
         if (!category || category.type !== ChannelType.GuildCategory) {
-            return interaction.reply({ content: '無効なカテゴリIDです。', flags: [MessageFlags.Ephemeral] });
+            return interaction.reply({ content: '指定されたカテゴリが見つかりません。入力候補から選択するか、正しいカテゴリ名またはIDを指定してください。', flags: [MessageFlags.Ephemeral] });
         }
 
         const sessionName = category.name;
